@@ -4,7 +4,7 @@
 import dns from 'dns';
 import util from 'util';
 
-import { Message, VideoConf, api } from '@rocket.chat/core-services';
+import { Message, VideoConf, api, Omnichannel } from '@rocket.chat/core-services';
 import { Logger } from '@rocket.chat/logger';
 import {
 	LivechatVisitors,
@@ -58,6 +58,11 @@ export const Livechat = {
 		if (guest.name) {
 			message.alias = guest.name;
 		}
+
+		if (!(await Omnichannel.isRoomEnabled(room))) {
+			throw new Error('error-mac-limit-reached');
+		}
+
 		return Object.assign(await sendMessage(guest, message, room), {
 			newRoom,
 			showConnecting: this.showConnecting(),
@@ -811,6 +816,10 @@ export const Livechat = {
 
 		if (room.transcriptRequest) {
 			throw new Meteor.Error('error-transcript-already-requested', 'Transcript already requested');
+		}
+
+		if (!(await Omnichannel.isRoomEnabled(room))) {
+			throw new Error('error-mac-limit-reached');
 		}
 
 		const { _id, username, name, utcOffset } = user;
