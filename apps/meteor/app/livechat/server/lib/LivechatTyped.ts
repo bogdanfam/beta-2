@@ -1,4 +1,4 @@
-import { Message } from '@rocket.chat/core-services';
+import { Message, Omnichannel } from '@rocket.chat/core-services';
 import type {
 	IOmnichannelRoom,
 	IOmnichannelRoomClosingInfo,
@@ -461,6 +461,10 @@ class LivechatClass {
 		// allow to only user to send transcripts from their own chats
 		if (room.t !== 'l' || !room.v || room.v.token !== token) {
 			throw new Error('error-invalid-room');
+		}
+
+		if (!(await Omnichannel.isRoomEnabled(room))) {
+			throw new Error('error-mac-limit-reached');
 		}
 
 		const showAgentInfo = settings.get<string>('Livechat_show_agent_info');
