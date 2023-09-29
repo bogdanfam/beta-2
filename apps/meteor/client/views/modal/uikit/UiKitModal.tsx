@@ -100,6 +100,7 @@ const UiKitModal = ({ initialView }: UiKitModalProps) => {
 				id: view.viewId,
 				state: groupStateByBlockId(values),
 			},
+			isCleared: false,
 		});
 	});
 

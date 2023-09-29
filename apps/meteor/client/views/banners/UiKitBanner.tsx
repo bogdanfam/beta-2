@@ -1,6 +1,8 @@
 import type { UiKit } from '@rocket.chat/core-typings';
 import { Banner, Icon } from '@rocket.chat/fuselage';
+import { useMutableCallback } from '@rocket.chat/fuselage-hooks';
 import { UiKitContext, bannerParser, UiKitBanner as UiKitBannerSurfaceRender, UiKitComponent } from '@rocket.chat/fuselage-ui-kit';
+import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
 import type { ReactElement, ContextType } from 'react';
 import React, { useMemo } from 'react';
 
@@ -8,7 +10,6 @@ import { useUiKitView } from '../../UIKit/hooks/useUiKitView';
 import MarkdownText from '../../components/MarkdownText';
 import { useUiKitActionManager } from '../../hooks/useUiKitActionManager';
 import * as banners from '../../lib/banners';
-import { useUIKitHandleClose } from './hooks/useUIKitHandleClose';
 
 // TODO: move this to fuselage-ui-kit itself
 bannerParser.mrkdwn = ({ text }): ReactElement => <MarkdownText variant='inline' content={text} />;
@@ -29,7 +30,26 @@ const UiKitBanner = ({ initialView }: UiKitBannerProps) => {
 		return null;
 	}, [view.icon]);
 
-	const handleClose = useUIKitHandleClose(view, () => banners.close());
+	const dispatchToastMessage = useToastMessageDispatch();
+	const handleClose = useMutableCallback(() =>
+		actionManager
+			.triggerCancel({
+				appId: view.appId,
+				viewId: view.viewId,
+				view: {
+					...view,
+					id: view.viewId,
+					state: {},
+				},
+				isCleared: true,
+			})
+			.then(() => banners.close())
+			.catch((error) => {
+				dispatchToastMessage({ type: 'error', message: error });
+				banners.close();
+				return Promise.reject(error);
+			}),
+	);
 
 	const actionManager = useUiKitActionManager();
 

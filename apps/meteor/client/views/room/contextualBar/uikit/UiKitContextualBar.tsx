@@ -111,6 +111,7 @@ const UiKitContextualBar = ({ initialView }: UiKitContextualBarProps): JSX.Eleme
 				id: view.viewId,
 				state: groupStateByBlockId(values),
 			},
+			isCleared: false,
 		});
 	});
 

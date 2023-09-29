@@ -1,24 +1,6 @@
 import type { IMessage, IRoom, UiKit } from '@rocket.chat/core-typings';
 import { createContext } from 'react';
 
-// type BlockActionUserInteractionPayload = {
-// 	type: 'blockAction';
-// 	actionId: string;
-// 	triggerId: string;
-// 	mid?: IMessage['_id'];
-// 	rid?: IRoom['_id'];
-// 	payload: UiKit.View;
-// 	container:
-// 		| {
-// 				type: 'view';
-// 				id: UiKit.View['viewId'];
-// 		  }
-// 		| {
-// 				type: 'message';
-// 				id: IMessage['_id'];
-// 		  };
-// };
-
 type BlockActionTriggerOptions =
 	| {
 			type: 'blockAction';
@@ -42,6 +24,14 @@ type BlockActionTriggerOptions =
 			mid: IMessage['_id'];
 			visitor?: unknown;
 	  };
+
+type ViewClosedTriggerOptions = {
+	type: 'viewClosed';
+	appId: string;
+	viewId: UiKit.View['viewId'];
+	view: UiKit.View & { id: UiKit.View['viewId']; state: Record<string, unknown> };
+	isCleared: boolean;
+};
 
 /**
  * Utility type to remove the `type` property from an **union** of objects.
@@ -68,7 +58,7 @@ type ActionManagerContextValue = {
 			triggerId: any;
 		},
 	) => any;
-	triggerAction(action: BlockActionTriggerOptions): Promise<void>;
+	triggerAction(action: BlockActionTriggerOptions | ViewClosedTriggerOptions): Promise<void>;
 	triggerAction({
 		type,
 		actionId,
@@ -91,10 +81,9 @@ type ActionManagerContextValue = {
 		tmid: any;
 	}): Promise<any>;
 	triggerBlockAction(options: WithoutType<BlockActionTriggerOptions>): Promise<void>;
-	// triggerBlockAction(options: any): Promise<any>;
 	triggerActionButtonAction: (options: any) => Promise<any>;
 	triggerSubmitView: ({ viewId, ...options }: { [x: string]: any; viewId: any }) => Promise<void>;
-	triggerCancel: ({ view, ...options }: { [x: string]: any; view: any }) => Promise<void>;
+	triggerCancel(options: WithoutType<ViewClosedTriggerOptions>): Promise<void>;
 	getUserInteractionPayloadByViewId: (viewId: any) => any;
 };
 
