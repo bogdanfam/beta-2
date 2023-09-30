@@ -29,9 +29,22 @@ type ViewClosedTriggerOptions = {
 	type: 'viewClosed';
 	appId: string;
 	viewId: UiKit.View['viewId'];
-	view: UiKit.View & { id: UiKit.View['viewId']; state: Record<string, unknown> };
+	view: UiKit.View & { id: UiKit.View['viewId']; state?: Record<string, unknown> };
 	isCleared: boolean;
 };
+
+type ViewSubmitTriggerOptions = {
+	type: 'viewSubmit';
+	appId: string;
+	viewId: UiKit.View['viewId'];
+	actionId?: string;
+	triggerId?: string;
+	payload: {
+		view: UiKit.View & { id: UiKit.View['viewId']; state?: Record<string, unknown> };
+	};
+};
+
+type TriggerOptions = BlockActionTriggerOptions | ViewClosedTriggerOptions | ViewSubmitTriggerOptions;
 
 /**
  * Utility type to remove the `type` property from an **union** of objects.
@@ -58,7 +71,7 @@ type ActionManagerContextValue = {
 			triggerId: any;
 		},
 	) => any;
-	triggerAction(action: BlockActionTriggerOptions | ViewClosedTriggerOptions): Promise<void>;
+	triggerAction(action: TriggerOptions): Promise<void>;
 	triggerAction({
 		type,
 		actionId,
@@ -81,9 +94,9 @@ type ActionManagerContextValue = {
 		tmid: any;
 	}): Promise<any>;
 	triggerBlockAction(options: WithoutType<BlockActionTriggerOptions>): Promise<void>;
-	triggerActionButtonAction: (options: any) => Promise<any>;
-	triggerSubmitView: ({ viewId, ...options }: { [x: string]: any; viewId: any }) => Promise<void>;
 	triggerCancel(options: WithoutType<ViewClosedTriggerOptions>): Promise<void>;
+	triggerSubmitView(options: WithoutType<ViewSubmitTriggerOptions>): Promise<void>;
+	triggerActionButtonAction: (options: any) => Promise<any>;
 	getUserInteractionPayloadByViewId: (viewId: any) => any;
 };
 

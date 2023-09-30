@@ -39,7 +39,6 @@ const UiKitBanner = ({ initialView }: UiKitBannerProps) => {
 				view: {
 					...view,
 					id: view.viewId,
-					state: {},
 				},
 				isCleared: true,
 			})
