@@ -13,12 +13,23 @@ import React, { memo, useMemo } from 'react';
 
 import { getURL } from '../../../../../app/utils/client';
 import { useUiKitView } from '../../../../UIKit/hooks/useUiKitView';
+import { useValues } from '../../../../UIKit/hooks/useValues';
 import { ContextualbarClose, ContextualbarScrollableContent } from '../../../../components/Contextualbar';
 import { useUiKitActionManager } from '../../../../hooks/useUiKitActionManager';
 import { getButtonStyle } from '../../../modal/uikit/getButtonStyle';
 import { useRoomToolbox } from '../../contexts/RoomToolboxContext';
-import type { InputFieldStateByBlockId, InputFieldStateObject, InputFieldStateTuple } from './hooks/useValues';
-import { useValues } from './hooks/useValues';
+
+const groupStateByBlockId = (values: { [actionId: string]: { value: unknown; blockId?: string } | undefined }) =>
+	Object.entries(values).reduce<{ [blockId: string]: { [actionId: string]: unknown } }>((obj, [key, payload]) => {
+		if (!payload?.blockId) {
+			return obj;
+		}
+
+		const { blockId, value } = payload;
+		obj[blockId] = obj[blockId] || {};
+		obj[blockId][key] = value;
+		return obj;
+	}, {});
 
 type UiKitContextualBarProps = {
 	key: UiKit.ContextualBarView['viewId']; // force re-mount when viewId changes
@@ -32,13 +43,6 @@ const UiKitContextualBar = ({ initialView }: UiKitContextualBarProps): JSX.Eleme
 	const { view } = useUiKitView(initialView);
 
 	const [values, updateValues] = useValues(view.blocks);
-
-	const groupStateByBlockId = (obj: InputFieldStateObject): InputFieldStateByBlockId =>
-		Object.entries(obj).reduce((obj: InputFieldStateByBlockId, [key, { blockId, value }]: InputFieldStateTuple) => {
-			obj[blockId] = obj[blockId] || {};
-			obj[blockId][key] = value;
-			return obj;
-		}, {} as InputFieldStateByBlockId);
 
 	const prevent = (e: SyntheticEvent): void => {
 		if (e) {

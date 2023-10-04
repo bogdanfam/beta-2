@@ -6,10 +6,23 @@ import type { ContextType, ReactEventHandler } from 'react';
 import React, { useMemo } from 'react';
 
 import { useUiKitView } from '../../../UIKit/hooks/useUiKitView';
+import { useValues } from '../../../UIKit/hooks/useValues';
 import { useUiKitActionManager } from '../../../hooks/useUiKitActionManager';
 import { detectEmoji } from '../../../lib/utils/detectEmoji';
 import ModalBlock from './ModalBlock';
-import { useValues } from './hooks/useValues';
+
+const groupStateByBlockId = (values: { [actionId: string]: { value: unknown; blockId?: string } | undefined }) =>
+	Object.entries(values).reduce<{ [blockId: string]: { [actionId: string]: unknown } }>((obj, [key, payload]) => {
+		if (!payload?.blockId) {
+			return obj;
+		}
+
+		const { blockId, value } = payload;
+		obj[blockId] = obj[blockId] || {};
+		obj[blockId][key] = value;
+
+		return obj;
+	}, {});
 
 type UiKitModalProps = {
 	key: UiKit.ModalView['viewId']; // force re-mount when viewId changes
@@ -20,14 +33,6 @@ const UiKitModal = ({ initialView }: UiKitModalProps) => {
 	const actionManager = useUiKitActionManager();
 	const { view, errors } = useUiKitView(initialView);
 	const [values, updateValues] = useValues(view.blocks);
-
-	const groupStateByBlockId = (values: { value: unknown; blockId: string }[]) =>
-		Object.entries(values).reduce<any>((obj, [key, { blockId, value }]) => {
-			obj[blockId] = obj[blockId] || {};
-			obj[blockId][key] = value;
-
-			return obj;
-		}, {});
 
 	const prevent: ReactEventHandler = (e) => {
 		if (e) {
