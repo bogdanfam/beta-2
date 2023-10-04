@@ -287,7 +287,7 @@ export const getUserInteractionPayloadByViewId = (viewId) => {
 	const instance = instances.get(viewId);
 
 	if (!instance) {
-		return {};
+		return undefined;
 	}
 
 	return instance.payload;
