@@ -1,39 +1,44 @@
 import type { UIKitUserInteractionResult, UiKit } from '@rocket.chat/core-typings';
 import { isErrorType } from '@rocket.chat/core-typings';
 import { useSafely } from '@rocket.chat/fuselage-hooks';
-import { useEffect, useState } from 'react';
+import { extractInitialStateFromLayout } from '@rocket.chat/fuselage-ui-kit';
+import type { Dispatch } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 
 import { useUiKitActionManager } from '../../hooks/useUiKitActionManager';
 
-type ViewState<TView extends UiKit.View> = {
+const reduceValues = (
+	values: { [actionId: string]: { value: unknown; blockId?: string } },
+	{ actionId, payload }: { actionId: string; payload: { value: unknown; blockId?: string } },
+): { [actionId: string]: { value: unknown; blockId?: string } } => ({
+	...values,
+	[actionId]: payload,
+});
+
+type UseUiKitViewReturnType<TView extends UiKit.View> = {
 	view: TView;
 	errors?: { [field: string]: string }[];
+	values: { [actionId: string]: { value: unknown; blockId?: string } };
+	updateValues: Dispatch<{ actionId: string; payload: { value: unknown; blockId?: string } }>;
 };
 
-export function useUiKitView(initialView: UiKit.BannerView): ViewState<UiKit.BannerView>;
-export function useUiKitView(initialView: UiKit.ModalView): ViewState<UiKit.ModalView>;
-export function useUiKitView(initialView: UiKit.ContextualBarView): ViewState<UiKit.ContextualBarView>;
-export function useUiKitView<S extends UiKit.View>(initialView: S): ViewState<S> {
-	const [state, setState] = useSafely(useState<ViewState<S>>({ view: initialView }));
+export function useUiKitView<S extends UiKit.View>(initialView: S): UseUiKitViewReturnType<S> {
+	const [errors, setErrors] = useSafely(useState<{ [field: string]: string }[] | undefined>());
+	const [values, updateValues] = useSafely(useReducer(reduceValues, initialView.blocks, extractInitialStateFromLayout));
+	const [view, updateView] = useSafely(useState(initialView));
 	const actionManager = useUiKitActionManager();
 
-	const { viewId } = state.view;
+	const { viewId } = view;
 
 	useEffect(() => {
 		const handleUpdate = (data: UIKitUserInteractionResult): void => {
 			if (isErrorType(data)) {
-				const { errors } = data;
-				setState((state) => ({ ...state, errors }));
+				setErrors(data.errors);
 				return;
 			}
 
-			setState((state) => {
-				const { type, ...rest } = data;
-				return {
-					...state,
-					view: { ...state.view, ...rest },
-				};
-			});
+			const { type, ...rest } = data;
+			updateView((view) => ({ ...view, ...rest }));
 		};
 
 		actionManager.on(viewId, handleUpdate);
@@ -41,7 +46,7 @@ export function useUiKitView<S extends UiKit.View>(initialView: S): ViewState<S>
 		return (): void => {
 			actionManager.off(viewId, handleUpdate);
 		};
-	}, [actionManager, setState, viewId]);
+	}, [actionManager, setErrors, updateView, viewId]);
 
-	return state;
+	return { view, errors, values, updateValues };
 }

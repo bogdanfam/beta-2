@@ -6,7 +6,6 @@ import type { ContextType, ReactEventHandler } from 'react';
 import React, { useMemo } from 'react';
 
 import { useUiKitView } from '../../../UIKit/hooks/useUiKitView';
-import { useValues } from '../../../UIKit/hooks/useValues';
 import { useUiKitActionManager } from '../../../hooks/useUiKitActionManager';
 import { detectEmoji } from '../../../lib/utils/detectEmoji';
 import ModalBlock from './ModalBlock';
@@ -31,8 +30,7 @@ type UiKitModalProps = {
 
 const UiKitModal = ({ initialView }: UiKitModalProps) => {
 	const actionManager = useUiKitActionManager();
-	const { view, errors } = useUiKitView(initialView);
-	const [values, updateValues] = useValues(view.blocks);
+	const { view, errors, values, updateValues } = useUiKitView(initialView);
 
 	const prevent: ReactEventHandler = (e) => {
 		if (e) {

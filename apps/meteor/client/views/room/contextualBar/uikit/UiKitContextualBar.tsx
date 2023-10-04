@@ -13,7 +13,6 @@ import React, { memo, useMemo } from 'react';
 
 import { getURL } from '../../../../../app/utils/client';
 import { useUiKitView } from '../../../../UIKit/hooks/useUiKitView';
-import { useValues } from '../../../../UIKit/hooks/useValues';
 import { ContextualbarClose, ContextualbarScrollableContent } from '../../../../components/Contextualbar';
 import { useUiKitActionManager } from '../../../../hooks/useUiKitActionManager';
 import { getButtonStyle } from '../../../modal/uikit/getButtonStyle';
@@ -40,9 +39,7 @@ const UiKitContextualBar = ({ initialView }: UiKitContextualBarProps): JSX.Eleme
 	const { closeTab } = useRoomToolbox();
 	const actionManager = useUiKitActionManager();
 
-	const { view } = useUiKitView(initialView);
-
-	const [values, updateValues] = useValues(view.blocks);
+	const { view, values, updateValues } = useUiKitView(initialView);
 
 	const prevent = (e: SyntheticEvent): void => {
 		if (e) {

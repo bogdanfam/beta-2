@@ -20,7 +20,7 @@ type UiKitBannerProps = {
 };
 
 const UiKitBanner = ({ initialView }: UiKitBannerProps) => {
-	const { view } = useUiKitView(initialView);
+	const { view, values } = useUiKitView(initialView);
 
 	const icon = useMemo(() => {
 		if (view.icon) {
@@ -71,9 +71,9 @@ const UiKitBanner = ({ initialView }: UiKitBannerProps) => {
 			},
 			state: (): void => undefined,
 			appId: view.appId,
-			values: {},
+			values,
 		}),
-		[actionManager, view.appId, view.viewId],
+		[actionManager, view.appId, view.viewId, values],
 	);
 
 	return (
