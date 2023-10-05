@@ -1,6 +1,6 @@
 import { AppInterface } from '@rocket.chat/apps-engine/definition/metadata';
-import { UIKitIncomingInteractionType } from '@rocket.chat/apps-engine/definition/uikit';
 import { UiKitCoreApp } from '@rocket.chat/core-services';
+import type { UiKit } from '@rocket.chat/core-typings';
 import cors from 'cors';
 import type { Request, Response } from 'express';
 import express from 'express';
@@ -91,11 +91,13 @@ const corsOptions: cors.CorsOptions = {
 
 apiServer.use('/api/apps/ui.interaction/', cors(corsOptions), router); // didn't have the rateLimiter option
 
-const getPayloadForType = (type: UIKitIncomingInteractionType, req: Request) => {
-	if (type === UIKitIncomingInteractionType.BLOCK) {
-		const { type, actionId, triggerId, mid, rid, payload, container } = req.body;
+const getPayloadForType = (type: UiKit.UserInteraction['type'], req: Request) => {
+	if (type === 'blockAction') {
+		const { type, actionId, triggerId, mid, rid, payload, container, visitor } = req.body as Extract<
+			UiKit.UserInteraction,
+			{ type: 'blockAction' }
+		>;
 
-		const { visitor } = req.body;
 		const { user } = req;
 
 		const room = rid; // orch.getConverters().get('rooms').convertById(rid);
@@ -114,12 +116,12 @@ const getPayloadForType = (type: UIKitIncomingInteractionType, req: Request) => 
 		} as const;
 	}
 
-	if (type === UIKitIncomingInteractionType.VIEW_CLOSED) {
+	if (type === 'viewClosed') {
 		const {
 			type,
 			actionId,
 			payload: { view, isCleared },
-		} = req.body;
+		} = req.body as Extract<UiKit.UserInteraction, { type: 'viewClosed' }>;
 
 		const { user } = req;
 
@@ -134,8 +136,8 @@ const getPayloadForType = (type: UIKitIncomingInteractionType, req: Request) => 
 		};
 	}
 
-	if (type === UIKitIncomingInteractionType.VIEW_SUBMIT) {
-		const { type, actionId, triggerId, payload } = req.body;
+	if (type === 'viewSubmit') {
+		const { type, actionId, triggerId, payload } = req.body as Extract<UiKit.UserInteraction, { type: 'viewSubmit' }>;
 
 		const { user } = req;
 
@@ -160,7 +162,7 @@ router.post('/:appId', async (req, res, next) => {
 	}
 
 	// eslint-disable-next-line prefer-destructuring
-	const type: UIKitIncomingInteractionType = req.body.type;
+	const type: UiKit.UserInteraction['type'] = req.body.type;
 
 	try {
 		const payload = {
@@ -186,10 +188,9 @@ const appsRoutes =
 		const { type } = req.body;
 
 		switch (type) {
-			case UIKitIncomingInteractionType.BLOCK: {
-				const { type, actionId, triggerId, mid, rid, payload, container } = req.body;
+			case 'blockAction': {
+				const { type, actionId, triggerId, mid, rid, payload, container, visitor } = req.body;
 
-				const { visitor } = req.body;
 				const room = await orch.getConverters()?.get('rooms').convertById(rid);
 				const user = orch.getConverters()?.get('users').convertToApp(req.user);
 				const message = mid && (await orch.getConverters()?.get('messages').convertById(mid));
@@ -220,7 +221,7 @@ const appsRoutes =
 				break;
 			}
 
-			case UIKitIncomingInteractionType.VIEW_CLOSED: {
+			case 'viewClosed': {
 				const {
 					type,
 					actionId,
@@ -251,7 +252,7 @@ const appsRoutes =
 				break;
 			}
 
-			case UIKitIncomingInteractionType.VIEW_SUBMIT: {
+			case 'viewSubmit': {
 				const { type, actionId, triggerId, payload } = req.body;
 
 				const user = orch.getConverters()?.get('users').convertToApp(req.user);
@@ -276,7 +277,7 @@ const appsRoutes =
 				break;
 			}
 
-			case UIKitIncomingInteractionType.ACTION_BUTTON: {
+			case 'actionButton': {
 				const {
 					type,
 					actionId,

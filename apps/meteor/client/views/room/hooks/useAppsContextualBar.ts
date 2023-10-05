@@ -2,7 +2,7 @@ import { useRouteParameter } from '@rocket.chat/ui-contexts';
 import { useCallback } from 'react';
 import { useSyncExternalStore } from 'use-sync-external-store/shim';
 
-import { useUiKitActionManager } from '../../../hooks/useUiKitActionManager';
+import { useUiKitActionManager } from '../../../UIKit/hooks/useUiKitActionManager';
 
 export const useAppsContextualBar = () => {
 	const viewId = useRouteParameter('context');

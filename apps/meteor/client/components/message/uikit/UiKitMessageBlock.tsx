@@ -6,6 +6,7 @@ import type { MessageSurfaceLayout } from '@rocket.chat/ui-kit';
 import type { ContextType, ReactElement } from 'react';
 import React, { useMemo } from 'react';
 
+import { useUiKitActionManager } from '../../../UIKit/hooks/useUiKitActionManager';
 import {
 	useVideoConfDispatchOutgoing,
 	useVideoConfIsCalling,
@@ -14,7 +15,6 @@ import {
 	useVideoConfManager,
 	useVideoConfSetPreferences,
 } from '../../../contexts/VideoConfContext';
-import { useUiKitActionManager } from '../../../hooks/useUiKitActionManager';
 import { useVideoConfWarning } from '../../../views/room/contextualBar/VideoConference/hooks/useVideoConfWarning';
 import GazzodownText from '../../GazzodownText';
 

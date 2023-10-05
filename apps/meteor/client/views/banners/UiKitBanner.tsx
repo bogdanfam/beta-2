@@ -6,9 +6,9 @@ import { useToastMessageDispatch } from '@rocket.chat/ui-contexts';
 import type { ReactElement, ContextType } from 'react';
 import React, { useMemo } from 'react';
 
+import { useUiKitActionManager } from '../../UIKit/hooks/useUiKitActionManager';
 import { useUiKitView } from '../../UIKit/hooks/useUiKitView';
 import MarkdownText from '../../components/MarkdownText';
-import { useUiKitActionManager } from '../../hooks/useUiKitActionManager';
 import * as banners from '../../lib/banners';
 
 // TODO: move this to fuselage-ui-kit itself

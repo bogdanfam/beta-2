@@ -5,7 +5,7 @@ import { extractInitialStateFromLayout } from '@rocket.chat/fuselage-ui-kit';
 import type { Dispatch } from 'react';
 import { useEffect, useReducer, useState } from 'react';
 
-import { useUiKitActionManager } from '../../hooks/useUiKitActionManager';
+import { useUiKitActionManager } from './useUiKitActionManager';
 
 const reduceValues = (
 	values: { [actionId: string]: { value: unknown; blockId?: string } },

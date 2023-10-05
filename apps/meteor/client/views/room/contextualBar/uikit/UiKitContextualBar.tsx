@@ -12,9 +12,9 @@ import type { SyntheticEvent, ContextType } from 'react';
 import React, { memo, useMemo } from 'react';
 
 import { getURL } from '../../../../../app/utils/client';
+import { useUiKitActionManager } from '../../../../UIKit/hooks/useUiKitActionManager';
 import { useUiKitView } from '../../../../UIKit/hooks/useUiKitView';
 import { ContextualbarClose, ContextualbarScrollableContent } from '../../../../components/Contextualbar';
-import { useUiKitActionManager } from '../../../../hooks/useUiKitActionManager';
 import { getButtonStyle } from '../../../modal/uikit/getButtonStyle';
 import { useRoomToolbox } from '../../contexts/RoomToolboxContext';
 

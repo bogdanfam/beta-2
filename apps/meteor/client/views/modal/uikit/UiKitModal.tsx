@@ -5,8 +5,8 @@ import { MarkupInteractionContext } from '@rocket.chat/gazzodown';
 import type { ContextType, ReactEventHandler } from 'react';
 import React, { useMemo } from 'react';
 
+import { useUiKitActionManager } from '../../../UIKit/hooks/useUiKitActionManager';
 import { useUiKitView } from '../../../UIKit/hooks/useUiKitView';
-import { useUiKitActionManager } from '../../../hooks/useUiKitActionManager';
 import { detectEmoji } from '../../../lib/utils/detectEmoji';
 import ModalBlock from './ModalBlock';
 
