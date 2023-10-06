@@ -65,9 +65,9 @@ const UiKitMessageBlock = ({ rid, mid, blocks }: UiKitMessageBlockProps): ReactE
 					}
 				}
 
-				actionManager?.triggerBlockAction({
+				actionManager.emitInteraction(appId, {
+					type: 'blockAction',
 					actionId,
-					appId,
 					container: {
 						type: 'message',
 						id: mid,

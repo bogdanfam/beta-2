@@ -2,12 +2,13 @@ import type { UiKit } from '@rocket.chat/core-typings';
 import { useDebouncedCallback, useMutableCallback } from '@rocket.chat/fuselage-hooks';
 import { UiKitContext } from '@rocket.chat/fuselage-ui-kit';
 import { MarkupInteractionContext } from '@rocket.chat/gazzodown';
-import type { ContextType, ReactEventHandler } from 'react';
+import type { ContextType, FormEvent } from 'react';
 import React, { useMemo } from 'react';
 
 import { useUiKitActionManager } from '../../../UIKit/hooks/useUiKitActionManager';
 import { useUiKitView } from '../../../UIKit/hooks/useUiKitView';
 import { detectEmoji } from '../../../lib/utils/detectEmoji';
+import { preventSyntheticEvent } from '../../../lib/utils/preventSyntheticEvent';
 import ModalBlock from './ModalBlock';
 
 const groupStateByBlockId = (values: { [actionId: string]: { value: unknown; blockId?: string } | undefined }) =>
@@ -32,16 +33,8 @@ const UiKitModal = ({ initialView }: UiKitModalProps) => {
 	const actionManager = useUiKitActionManager();
 	const { view, errors, values, updateValues } = useUiKitView(initialView);
 
-	const prevent: ReactEventHandler = (e) => {
-		if (e) {
-			(e.nativeEvent || e).stopImmediatePropagation();
-			e.stopPropagation();
-			e.preventDefault();
-		}
-	};
-
-	const triggerBlockAction = useMemo(() => actionManager.triggerBlockAction.bind(actionManager), [actionManager]);
-	const debouncedTriggerBlockAction = useDebouncedCallback(triggerBlockAction, 700);
+	const emitInteraction = useMemo(() => actionManager.emitInteraction.bind(actionManager), [actionManager]);
+	const debouncedEmitInteraction = useDebouncedCallback(emitInteraction, 700);
 
 	// TODO: this structure is atrociously wrong; we should revisit this
 	const contextValue = useMemo(
@@ -51,18 +44,18 @@ const UiKitModal = ({ initialView }: UiKitModalProps) => {
 					return;
 				}
 
-				const trigger = dispatchActionConfig?.includes('on_character_entered') ? debouncedTriggerBlockAction : triggerBlockAction;
+				const emit = dispatchActionConfig?.includes('on_character_entered') ? debouncedEmitInteraction : emitInteraction;
 
-				await trigger({
+				await emit(appId, {
+					type: 'blockAction',
+					actionId,
 					container: {
 						type: 'view',
 						id: viewId,
 					},
-					actionId,
-					appId,
+					payload: view,
 				});
 			},
-
 			state: ({ actionId, value, /* ,appId, */ blockId = 'default' }) => {
 				updateValues({
 					actionId,
@@ -75,11 +68,11 @@ const UiKitModal = ({ initialView }: UiKitModalProps) => {
 			...view,
 			values,
 		}),
-		[debouncedTriggerBlockAction, triggerBlockAction, updateValues, values, view],
+		[debouncedEmitInteraction, emitInteraction, updateValues, values, view],
 	);
 
 	const handleSubmit = useMutableCallback((e) => {
-		prevent(e);
+		preventSyntheticEvent(e);
 		actionManager.triggerSubmitView({
 			viewId: view.viewId,
 			appId: view.appId,
@@ -93,31 +86,41 @@ const UiKitModal = ({ initialView }: UiKitModalProps) => {
 		});
 	});
 
-	const handleCancel = useMutableCallback((e) => {
-		prevent(e);
-		actionManager.triggerCancel({
-			viewId: view.viewId,
-			appId: view.appId,
-			view: {
-				...view,
-				id: view.viewId,
-				state: groupStateByBlockId(values),
-			},
-			isCleared: false,
-		});
+	const handleCancel = useMutableCallback((e: FormEvent) => {
+		preventSyntheticEvent(e);
+		void actionManager
+			.emitInteraction(view.appId, {
+				type: 'viewClosed',
+				payload: {
+					view: {
+						...view,
+						id: view.viewId,
+						state: groupStateByBlockId(values),
+					},
+					isCleared: false,
+				},
+			})
+			.finally(() => {
+				actionManager.disposeView(view.viewId);
+			});
 	});
 
 	const handleClose = useMutableCallback(() => {
-		actionManager.triggerCancel({
-			viewId: view.viewId,
-			appId: view.appId,
-			view: {
-				...view,
-				id: view.viewId,
-				state: groupStateByBlockId(values),
-			},
-			isCleared: true,
-		});
+		void actionManager
+			.emitInteraction(view.appId, {
+				type: 'viewClosed',
+				payload: {
+					view: {
+						...view,
+						id: view.viewId,
+						state: groupStateByBlockId(values),
+					},
+					isCleared: true,
+				},
+			})
+			.finally(() => {
+				actionManager.disposeView(view.viewId);
+			});
 	});
 
 	return (

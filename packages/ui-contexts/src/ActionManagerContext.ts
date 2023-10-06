@@ -1,4 +1,4 @@
-import type { IMessage, IRoom, UiKit } from '@rocket.chat/core-typings';
+import type { DistributiveOmit, IMessage, IRoom, UiKit } from '@rocket.chat/core-typings';
 import { createContext } from 'react';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -11,6 +11,8 @@ interface ActionManagerUserInteractionsMap extends Record<UiKit.UserInteraction[
 					type: 'view';
 					id: UiKit.View['viewId'];
 				};
+				rid?: undefined;
+				mid?: undefined;
 				visitor?: unknown;
 		  }
 		| {
@@ -27,6 +29,7 @@ interface ActionManagerUserInteractionsMap extends Record<UiKit.UserInteraction[
 	viewClosed: {
 		appId: string;
 		viewId: UiKit.View['viewId'];
+		actionId?: string;
 		view: UiKit.View & { id: UiKit.View['viewId']; state?: Record<string, unknown> };
 		isCleared: boolean;
 	};
@@ -81,6 +84,7 @@ type ActionManagerContextValue = {
 	off(viewId: string, listener: (data: any) => any): void;
 	off(eventName: 'busy', listener: ({ busy }: { busy: boolean }) => void): void;
 	generateTriggerId(appId: string | undefined): string;
+	emitInteraction(appId: string, userInteraction: DistributiveOmit<UiKit.UserInteraction, 'triggerId'>): Promise<unknown>;
 	handlePayloadUserInteraction: (
 		type: any,
 		{
@@ -92,11 +96,9 @@ type ActionManagerContextValue = {
 		},
 	) => any;
 	triggerAction(action: ActionMangerUserInteraction): Promise<unknown>;
-	triggerBlockAction(options: ActionManagerUserInteractionsMap['blockAction']): Promise<void>;
-	triggerCancel(options: ActionManagerUserInteractionsMap['viewClosed']): Promise<void>;
 	triggerSubmitView(options: ActionManagerUserInteractionsMap['viewSubmit']): Promise<void>;
-	triggerActionButtonAction(options: ActionManagerUserInteractionsMap['actionButton']): Promise<any>;
 	getUserInteractionPayloadByViewId: (viewId: any) => any;
+	disposeView(viewId: UiKit.View['viewId']): void;
 };
 
 export const ActionManagerContext = createContext<ActionManagerContextValue | undefined>(undefined);

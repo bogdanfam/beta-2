@@ -91,12 +91,11 @@ const corsOptions: cors.CorsOptions = {
 
 apiServer.use('/api/apps/ui.interaction/', cors(corsOptions), router); // didn't have the rateLimiter option
 
-const getPayloadForType = (type: UiKit.UserInteraction['type'], req: Request) => {
+const getPayloadForType = (req: Request<Record<string, string>, any, UiKit.UserInteraction>) => {
+	const { type } = req.body;
+
 	if (type === 'blockAction') {
-		const { type, actionId, triggerId, mid, rid, payload, container, visitor } = req.body as Extract<
-			UiKit.UserInteraction,
-			{ type: 'blockAction' }
-		>;
+		const { type, actionId, triggerId, mid, rid, payload, container, visitor } = req.body;
 
 		const { user } = req;
 
@@ -121,7 +120,7 @@ const getPayloadForType = (type: UiKit.UserInteraction['type'], req: Request) =>
 			type,
 			actionId,
 			payload: { view, isCleared },
-		} = req.body as Extract<UiKit.UserInteraction, { type: 'viewClosed' }>;
+		} = req.body;
 
 		const { user } = req;
 
@@ -137,7 +136,7 @@ const getPayloadForType = (type: UiKit.UserInteraction['type'], req: Request) =>
 	}
 
 	if (type === 'viewSubmit') {
-		const { type, actionId, triggerId, payload } = req.body as Extract<UiKit.UserInteraction, { type: 'viewSubmit' }>;
+		const { type, actionId, triggerId, payload } = req.body;
 
 		const { user } = req;
 
@@ -166,7 +165,7 @@ router.post('/:appId', async (req, res, next) => {
 
 	try {
 		const payload = {
-			...getPayloadForType(type, req),
+			...getPayloadForType(req),
 			appId,
 		};
 
@@ -182,7 +181,7 @@ router.post('/:appId', async (req, res, next) => {
 
 const appsRoutes =
 	(orch: AppServerOrchestrator) =>
-	async (req: Request, res: Response): Promise<void> => {
+	async (req: Request<Record<string, string>, any, UiKit.UserInteraction>, res: Response): Promise<void> => {
 		const { appId } = req.params;
 
 		const { type } = req.body;
@@ -224,7 +223,6 @@ const appsRoutes =
 			case 'viewClosed': {
 				const {
 					type,
-					actionId,
 					payload: { view, isCleared },
 				} = req.body;
 
@@ -233,7 +231,7 @@ const appsRoutes =
 				const action = {
 					type,
 					appId,
-					actionId,
+					actionId: undefined,
 					user,
 					payload: {
 						view,
@@ -282,11 +280,12 @@ const appsRoutes =
 					type,
 					actionId,
 					triggerId,
-					rid,
-					mid,
-					tmid,
-					payload: { context, message: msgText },
+					payload: { context },
 				} = req.body;
+				const rid = 'rid' in req.body ? req.body.rid : undefined;
+				const mid = 'mid' in req.body ? req.body.mid : undefined;
+				const tmid = 'tmid' in req.body ? req.body.tmid : undefined;
+				const msgText = 'message' in req.body ? req.body.message : undefined;
 
 				const room = await orch.getConverters()?.get('rooms').convertById(rid);
 				const user = orch.getConverters()?.get('users').convertToApp(req.user);
@@ -303,7 +302,7 @@ const appsRoutes =
 					tmid,
 					payload: {
 						context,
-						...(msgText && { message: msgText }),
+						...(msgText ? { message: msgText } : {}),
 					},
 				};
 

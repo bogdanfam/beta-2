@@ -1,3 +1,4 @@
+import type { UiKit, DistributiveOmit } from '@rocket.chat/core-typings';
 import { Emitter } from '@rocket.chat/emitter';
 import { Random } from '@rocket.chat/random';
 import type { ActionManagerContext } from '@rocket.chat/ui-contexts';
@@ -30,7 +31,7 @@ class ActionManager implements ActionManagerType {
 		return appId;
 	}
 
-	protected instances = new Map<string, { payload?: any; close: () => void }>();
+	protected viewInstances = new Map<string, { payload?: any; close: () => void }>();
 
 	public on = this.events.on.bind(this.events);
 
@@ -43,7 +44,33 @@ class ActionManager implements ActionManagerType {
 		return triggerId;
 	}
 
-	public handlePayloadUserInteraction(type: any, { triggerId, ...data }: any) {
+	public async emitInteraction(appId: string, userInteraction: DistributiveOmit<UiKit.UserInteraction, 'triggerId'>) {
+		this.events.emit('busy', { busy: true });
+
+		const triggerId = this.generateTriggerId(appId);
+
+		let timeout: ReturnType<typeof setTimeout> | undefined;
+
+		try {
+			return new Promise((resolve, reject) => {
+				timeout = setTimeout(() => reject(new UiKitTriggerTimeoutError('Timeout', { triggerId, appId })), ActionManager.TRIGGER_TIMEOUT);
+
+				sdk.rest
+					.post(`/apps/ui.interaction/${appId}`, {
+						...userInteraction,
+						triggerId,
+					})
+					.then(({ type, ...data }) => {
+						resolve(this.handlePayloadUserInteraction(type, data));
+					}, reject);
+			});
+		} finally {
+			if (timeout) clearTimeout(timeout);
+			this.events.emit('busy', { busy: false });
+		}
+	}
+
+	public handlePayloadUserInteraction(this: this, type: any, { triggerId, ...data }: any) {
 		if (!this.triggersId.has(triggerId)) {
 			return;
 		}
@@ -98,10 +125,10 @@ class ActionManager implements ActionManagerType {
 				},
 			});
 
-			this.instances.set(viewId, {
+			this.viewInstances.set(viewId, {
 				close: () => {
 					instance.close();
-					this.instances.delete(viewId);
+					this.viewInstances.delete(viewId);
 				},
 			});
 
@@ -125,7 +152,7 @@ class ActionManager implements ActionManagerType {
 		}
 
 		if (type === 'contextual_bar.open') {
-			this.instances.set(viewId, {
+			this.viewInstances.set(viewId, {
 				payload: {
 					type,
 					triggerId,
@@ -134,7 +161,7 @@ class ActionManager implements ActionManagerType {
 					...data,
 				},
 				close: () => {
-					this.instances.delete(viewId);
+					this.viewInstances.delete(viewId);
 				},
 			});
 
@@ -152,7 +179,7 @@ class ActionManager implements ActionManagerType {
 
 		if (type === 'banner.open') {
 			banners.open(data);
-			this.instances.set(viewId, {
+			this.viewInstances.set(viewId, {
 				close() {
 					banners.closeById(viewId);
 				},
@@ -162,24 +189,21 @@ class ActionManager implements ActionManagerType {
 		}
 
 		if (type === 'banner.close') {
-			const instance = this.instances.get(viewId);
-
-			if (instance) {
-				instance.close();
-			}
+			this.disposeView(viewId);
 			return 'banner.close';
 		}
 
 		if (type === 'contextual_bar.close') {
-			const instance = this.instances.get(viewId);
-
-			if (instance) {
-				instance.close();
-			}
+			this.disposeView(viewId);
 			return 'contextual_bar.close';
 		}
 
-		return 'modal.close';
+		if (type === 'modal.close') {
+			this.disposeView(viewId);
+			return 'modal.close';
+		}
+
+		throw new Error(`Unknown type: ${type}`);
 	}
 
 	public async triggerAction({ type, appId, ...rest }: Parameters<ActionManagerType['triggerAction']>[0]) {
@@ -210,17 +234,9 @@ class ActionManager implements ActionManagerType {
 		}
 	}
 
-	public async triggerBlockAction(options: Parameters<ActionManagerType['triggerBlockAction']>[0]): Promise<void> {
-		await this.triggerAction({ type: 'blockAction', ...options });
-	}
-
-	public async triggerActionButtonAction(options: Parameters<ActionManagerType['triggerActionButtonAction']>[0]): Promise<void> {
-		await this.triggerAction({ type: 'actionButton', ...options });
-	}
-
 	public async triggerSubmitView({ viewId, ...options }: any): Promise<void> {
 		const close = () => {
-			const instance = this.instances.get(viewId);
+			const instance = this.viewInstances.get(viewId);
 
 			if (instance) {
 				instance.close();
@@ -241,29 +257,24 @@ class ActionManager implements ActionManagerType {
 		}
 	}
 
-	public async triggerCancel({ view, ...options }: any): Promise<void> {
-		const instance = this.instances.get(view.id);
-		try {
-			await this.triggerAction({ type: 'viewClosed', view, ...options });
-		} finally {
-			if (instance) {
-				instance.close();
-			}
-		}
-	}
-
 	public getUserInteractionPayloadByViewId(viewId: string) {
 		if (!viewId) {
 			throw new Error('No viewId provided when checking for `user interaction payload`');
 		}
 
-		const instance = this.instances.get(viewId);
+		const instance = this.viewInstances.get(viewId);
 
 		if (!instance) {
 			return undefined;
 		}
 
 		return instance.payload;
+	}
+
+	public disposeView(viewId: UiKit.View['viewId']) {
+		const instance = this.viewInstances.get(viewId);
+		instance?.close?.();
+		this.viewInstances.delete(viewId);
 	}
 }
 

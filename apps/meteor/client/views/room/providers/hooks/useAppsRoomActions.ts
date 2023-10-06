@@ -32,13 +32,12 @@ export const useAppsRoomActions = () => {
 					// if the code made it this far, the button should be shown
 					action: () => {
 						void actionManager
-							.triggerActionButtonAction({
-								rid: room._id,
+							.emitInteraction(action.appId, {
+								type: 'actionButton',
 								actionId: action.actionId,
-								appId: action.appId,
+								rid: room._id,
 								payload: { context: action.context },
 							})
-
 							.catch(async (reason) => {
 								if (reason instanceof UiKitTriggerTimeoutError) {
 									dispatchToastMessage({

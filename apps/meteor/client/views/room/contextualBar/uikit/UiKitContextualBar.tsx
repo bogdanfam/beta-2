@@ -8,13 +8,14 @@ import {
 	UiKitContext,
 } from '@rocket.chat/fuselage-ui-kit';
 import { BlockContext } from '@rocket.chat/ui-kit';
-import type { SyntheticEvent, ContextType } from 'react';
+import type { ContextType, UIEvent } from 'react';
 import React, { memo, useMemo } from 'react';
 
 import { getURL } from '../../../../../app/utils/client';
 import { useUiKitActionManager } from '../../../../UIKit/hooks/useUiKitActionManager';
 import { useUiKitView } from '../../../../UIKit/hooks/useUiKitView';
 import { ContextualbarClose, ContextualbarScrollableContent } from '../../../../components/Contextualbar';
+import { preventSyntheticEvent } from '../../../../lib/utils/preventSyntheticEvent';
 import { getButtonStyle } from '../../../modal/uikit/getButtonStyle';
 import { useRoomToolbox } from '../../contexts/RoomToolboxContext';
 
@@ -41,16 +42,8 @@ const UiKitContextualBar = ({ initialView }: UiKitContextualBarProps): JSX.Eleme
 
 	const { view, values, updateValues } = useUiKitView(initialView);
 
-	const prevent = (e: SyntheticEvent): void => {
-		if (e) {
-			(e.nativeEvent || e).stopImmediatePropagation();
-			e.stopPropagation();
-			e.preventDefault();
-		}
-	};
-
-	const triggerBlockAction = useMemo(() => actionManager.triggerBlockAction.bind(actionManager), [actionManager]);
-	const debouncedTriggerBlockAction = useDebouncedCallback(triggerBlockAction, 700);
+	const emitInteraction = useMemo(() => actionManager.emitInteraction.bind(actionManager), [actionManager]);
+	const debouncedEmitInteraction = useDebouncedCallback(emitInteraction, 700);
 
 	const contextValue = useMemo(
 		(): ContextType<typeof UiKitContext> => ({
@@ -59,15 +52,16 @@ const UiKitContextualBar = ({ initialView }: UiKitContextualBarProps): JSX.Eleme
 					return;
 				}
 
-				const trigger = dispatchActionConfig?.includes('on_character_entered') ? debouncedTriggerBlockAction : triggerBlockAction;
+				const emit = dispatchActionConfig?.includes('on_character_entered') ? debouncedEmitInteraction : emitInteraction;
 
-				await trigger({
+				await emit(appId, {
+					type: 'blockAction',
+					actionId,
 					container: {
 						type: 'view',
 						id: viewId,
 					},
-					actionId,
-					appId,
+					payload: view,
 				});
 			},
 			state: ({ actionId, value, blockId = 'default' }) => {
@@ -82,11 +76,11 @@ const UiKitContextualBar = ({ initialView }: UiKitContextualBarProps): JSX.Eleme
 			...view,
 			values,
 		}),
-		[debouncedTriggerBlockAction, triggerBlockAction, updateValues, values, view],
+		[debouncedEmitInteraction, emitInteraction, updateValues, values, view],
 	);
 
 	const handleSubmit = useMutableCallback((e) => {
-		prevent(e);
+		preventSyntheticEvent(e);
 		closeTab();
 		actionManager.triggerSubmitView({
 			viewId: view.viewId,
@@ -101,34 +95,44 @@ const UiKitContextualBar = ({ initialView }: UiKitContextualBarProps): JSX.Eleme
 		});
 	});
 
-	const handleCancel = useMutableCallback((e) => {
-		prevent(e);
+	const handleCancel = useMutableCallback((e: UIEvent) => {
+		preventSyntheticEvent(e);
 		closeTab();
-		return actionManager.triggerCancel({
-			appId: view.appId,
-			viewId: view.viewId,
-			view: {
-				...view,
-				id: view.viewId,
-				state: groupStateByBlockId(values),
-			},
-			isCleared: false,
-		});
+		void actionManager
+			.emitInteraction(view.appId, {
+				type: 'viewClosed',
+				payload: {
+					view: {
+						...view,
+						id: view.viewId,
+						state: groupStateByBlockId(values),
+					},
+					isCleared: false,
+				},
+			})
+			.finally(() => {
+				actionManager.disposeView(view.viewId);
+			});
 	});
 
-	const handleClose = useMutableCallback((e) => {
-		prevent(e);
+	const handleClose = useMutableCallback((e: UIEvent) => {
+		preventSyntheticEvent(e);
 		closeTab();
-		return actionManager.triggerCancel({
-			appId: view.appId,
-			viewId: view.viewId,
-			view: {
-				...view,
-				id: view.viewId,
-				state: groupStateByBlockId(values),
-			},
-			isCleared: true,
-		});
+		void actionManager
+			.emitInteraction(view.appId, {
+				type: 'viewClosed',
+				payload: {
+					view: {
+						...view,
+						id: view.viewId,
+						state: groupStateByBlockId(values),
+					},
+					isCleared: true,
+				},
+			})
+			.finally(() => {
+				actionManager.disposeView(view.viewId);
+			});
 	});
 
 	return (

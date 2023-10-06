@@ -81,11 +81,11 @@ export const useMessageboxAppsActionButtons = () => {
 						label: Utilities.getI18nKeyForApp(action.labelI18n, action.appId),
 						action: (params) => {
 							void actionManager
-								.triggerActionButtonAction({
+								.emitInteraction(action.appId, {
+									type: 'actionButton',
 									rid: params.rid,
 									tmid: params.tmid,
 									actionId: action.actionId,
-									appId: action.appId,
 									payload: { context: action.context, message: params.chat.composer?.text },
 								})
 								.catch(async (reason) => {
@@ -133,9 +133,9 @@ export const useUserDropdownAppsActionButtons = () => {
 						content: action.labelI18n,
 						onClick: () => {
 							void actionManager
-								.triggerActionButtonAction({
+								.emitInteraction(action.appId, {
+									type: 'actionButton',
 									actionId: action.actionId,
-									appId: action.appId,
 									payload: { context: action.context },
 								})
 								.catch(async (reason) => {
@@ -188,12 +188,12 @@ export const useMessageActionAppsActionButtons = (context?: MessageActionContext
 						variant: action.variant,
 						action: (_, params) => {
 							void actionManager
-								.triggerActionButtonAction({
+								.emitInteraction(action.appId, {
+									type: 'actionButton',
 									rid: params.message.rid,
 									tmid: params.message.tmid,
 									mid: params.message._id,
 									actionId: action.actionId,
-									appId: action.appId,
 									payload: { context: action.context },
 								})
 								.catch(async (reason) => {

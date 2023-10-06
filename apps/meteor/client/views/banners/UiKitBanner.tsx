@@ -9,7 +9,6 @@ import React, { useMemo } from 'react';
 import { useUiKitActionManager } from '../../UIKit/hooks/useUiKitActionManager';
 import { useUiKitView } from '../../UIKit/hooks/useUiKitView';
 import MarkdownText from '../../components/MarkdownText';
-import * as banners from '../../lib/banners';
 
 // TODO: move this to fuselage-ui-kit itself
 bannerParser.mrkdwn = ({ text }): ReactElement => <MarkdownText variant='inline' content={text} />;
@@ -31,49 +30,53 @@ const UiKitBanner = ({ initialView }: UiKitBannerProps) => {
 	}, [view.icon]);
 
 	const dispatchToastMessage = useToastMessageDispatch();
-	const handleClose = useMutableCallback(() =>
-		actionManager
-			.triggerCancel({
-				appId: view.appId,
-				viewId: view.viewId,
-				view: {
-					...view,
-					id: view.viewId,
+	const handleClose = useMutableCallback(() => {
+		void actionManager
+			.emitInteraction(view.appId, {
+				type: 'viewClosed',
+				payload: {
+					view: {
+						...view,
+						id: view.viewId,
+					},
+					isCleared: true,
 				},
-				isCleared: true,
 			})
-			.then(() => banners.close())
 			.catch((error) => {
 				dispatchToastMessage({ type: 'error', message: error });
-				banners.close();
 				return Promise.reject(error);
-			}),
-	);
+			})
+			.finally(() => {
+				actionManager.disposeView(view.viewId);
+			});
+	});
 
 	const actionManager = useUiKitActionManager();
 
 	const contextValue = useMemo(
 		(): ContextType<typeof UiKitContext> => ({
-			action: async ({ appId, viewId, actionId }): Promise<void> => {
+			action: async ({ appId, viewId, actionId }) => {
 				if (!appId || !viewId) {
 					return;
 				}
 
-				await actionManager.triggerBlockAction({
+				await actionManager.emitInteraction(appId, {
+					type: 'blockAction',
+					actionId,
 					container: {
 						type: 'view',
 						id: viewId,
 					},
-					actionId,
-					appId,
+					payload: view,
 				});
-				banners.closeById(view.viewId);
+
+				actionManager.disposeView(view.viewId);
 			},
 			state: (): void => undefined,
 			appId: view.appId,
 			values,
 		}),
-		[actionManager, view.appId, view.viewId, values],
+		[view, values, actionManager],
 	);
 
 	return (

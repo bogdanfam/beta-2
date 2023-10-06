@@ -22,7 +22,7 @@ export type UserInteraction =
 			triggerId: string;
 			mid: IMessage['_id'];
 			rid: IRoom['_id'];
-			payload: View;
+			payload?: undefined;
 			container: {
 				type: 'message';
 				id: View['viewId'];
@@ -31,16 +31,41 @@ export type UserInteraction =
 	  }
 	| {
 			type: 'viewSubmit';
-			actionId: string;
+			actionId?: string;
 			triggerId: string;
-			payload: View;
+			payload: View & { id: View['viewId']; state?: { [blockId: string]: { [actionId: string]: unknown } } };
 	  }
 	| {
 			type: 'viewClosed';
-			actionId: string;
+			actionId?: string;
+			triggerId: string;
 			payload: {
-				view: View;
+				view: View & { id: View['viewId']; state?: { [blockId: string]: { [actionId: string]: unknown } } };
 				isCleared: boolean;
+			};
+	  }
+	| {
+			type: 'actionButton';
+			actionId: string;
+			triggerId: string;
+			payload: { context: 'userDropdownAction' };
+	  }
+	| {
+			type: 'actionButton';
+			actionId: string;
+			triggerId: string;
+			rid: IRoom['_id'];
+			payload: { context: 'roomAction' };
+	  }
+	| {
+			type: 'actionButton';
+			actionId: string;
+			triggerId: string;
+			rid: IRoom['_id'];
+			tmid?: IMessage['_id'];
+			payload: {
+				context: 'messageBoxAction';
+				message?: string;
 			};
 	  }
 	| {
@@ -50,8 +75,5 @@ export type UserInteraction =
 			rid: IRoom['_id'];
 			mid: IMessage['_id'];
 			tmid?: IMessage['_id'];
-			payload: {
-				context: 'messageAction' | 'roomAction' | 'messageBoxAction' | 'userDropdownAction' | 'roomSideBarAction';
-				message: string | undefined;
-			};
+			payload: { context: 'messageAction' };
 	  };
